@@ -1,0 +1,47 @@
+name: Process Twitter Archive
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'input/**'
+
+jobs:
+  process_archive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Parse Twitter Archive
+        run: |
+          python scripts/parse_twitter_archive.py
+
+      - name: Build Corpus
+        run: |
+          python scripts/build_corpus.py
+
+      - name: Extract Style Features
+        run: |
+          python scripts/extract_style_features.py
+
+      - name: Generate Word Cloud
+        run: |
+          python scripts/twitter_wordcloud.py
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: twitter-archive-outputs
+          path: output/

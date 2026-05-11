@@ -1,0 +1,81 @@
+name: Fetch Tweets by Username
+
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: 'Twitter username'
+        required: true
+        type: string
+      since:
+        description: 'Start date (yyyy-mm-dd)'
+        required: true
+        type: string
+      until:
+        description: 'End date (yyyy-mm-dd)'
+        required: false
+        type: string
+      limit:
+        description: 'Number of tweets to fetch (optional)'
+        required: false
+        type: integer
+      fetch_likes:
+        description: 'Whether to fetch likes (true/false)'
+        required: false
+        type: boolean
+      likes_backend:
+        description: 'Backend to use for fetching likes (tweepy/apify)'
+        required: false
+        type: string
+
+jobs:
+  fetch_tweets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch User Tweets
+        run: |
+          python scripts/fetch_user_tweets.py \
+            --username ${{ github.event.inputs.username }} \
+            --since ${{ github.event.inputs.since }} \
+            --until ${{ github.event.inputs.until }} \
+            --limit ${{ github.event.inputs.limit }}
+
+      - name: Fetch User Likes (optional)
+        if: ${{ github.event.inputs.fetch_likes }}
+        run: |
+          python scripts/fetch_user_likes.py \
+            --username ${{ github.event.inputs.username }} \
+            --limit ${{ github.event.inputs.limit }} \
+            --backend ${{ github.event.inputs.likes_backend }}
+
+      - name: Build Corpus
+        run: |
+          python scripts/build_corpus.py
+
+      - name: Extract Style Features
+        run: |
+          python scripts/extract_style_features.py
+
+      - name: Generate Word Cloud
+        run: |
+          python scripts/twitter_wordcloud.py
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: twitter-username-outputs
+          path: output/
